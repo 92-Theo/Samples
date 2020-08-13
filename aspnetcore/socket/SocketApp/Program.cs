@@ -19,6 +19,10 @@ namespace SocketApp
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
+            .ConfigureServices(services =>
+            {
+
+            })
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.ConfigureKestrel(serverOptions =>
@@ -26,6 +30,7 @@ namespace SocketApp
                     // Set properties and call methods on options
                     serverOptions.ListenLocalhost(8007, builder =>
                     {
+                        builder.UseConnectionHandler<MyEchoConnectionHandler>();
                         //builder.UseConnectionHandler();
                     });
                 })
