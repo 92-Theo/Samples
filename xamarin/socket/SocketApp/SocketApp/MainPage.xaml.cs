@@ -17,5 +17,23 @@ namespace SocketApp
         {
             InitializeComponent();
         }
+
+
+        
+        private async void ConnectButton_Clicked(object sender, EventArgs e)
+        {
+            string ipStr = _entryIP.Text; 
+            string portStr = _entryPort.Text;
+
+            int port;
+            if (int.TryParse(portStr, out port))
+            {
+                //AsynchronousClient.StartClient(ipStr, port);
+                SynchronousSocketClient.StartClient(ipStr, port);
+            }
+            
+            //_entryIP.Text;
+            //_entryPort.Text;
+        }
     }
 }
