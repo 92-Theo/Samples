@@ -1,0 +1,187 @@
+﻿@page "/"
+@inject RestAPI restAPI
+@inject NavigationManager navManager
+
+
+    <h1>
+        발주서 목록 조회(일단위 페이징)
+    </h1>
+    <div>
+        <h3>
+            Access Key
+        </h3>
+        <input type="text" @bind="AccessKey" placeholder="Enter the..." />
+        <h3>
+            Secret Key
+        </h3>
+        <input type="text" @bind="SecretKey" placeholder="Enter the..." />
+        <h3>
+            판매자 ID
+            쿠팡에서 업체에게 발급한 고유 코드
+            예) A00012345
+        </h3>
+        <input type="text" @bind="VendorId" placeholder="Enter the..." />
+        <h3>
+            검색 시작일시
+        </h3>
+        <input type="date" @bind="CreatedAtFrom" />
+
+        <h3>
+            검색 종료일시
+        </h3>
+        <input type="date" @bind="CreatedAtTo" />
+        <h3>
+            발주서 상태
+        </h3>
+        <select @bind="Status">
+            <option value="@((int)OrderSheetStatus.Accept)">@Helper.ToString(OrderSheetStatus.Accept)</option>
+            <option value="@((int)OrderSheetStatus.Instruct)">@Helper.ToString(OrderSheetStatus.Instruct)</option>
+            <option value="@((int)OrderSheetStatus.Departure)">@Helper.ToString(OrderSheetStatus.Departure)</option>
+            <option value="@((int)OrderSheetStatus.Delivering)">@Helper.ToString(OrderSheetStatus.Delivering)</option>
+            <option value="@((int)OrderSheetStatus.FinalDelivery)">@Helper.ToString(OrderSheetStatus.FinalDelivery)</option>
+            <option value="@((int)OrderSheetStatus.NoneTracking)">@Helper.ToString(OrderSheetStatus.NoneTracking)</option>
+        </select>
+
+        <button @onclick="()=>Search()">발주서 검색</button>
+
+        <div>@Message</div>
+
+        @if (Items != default)
+        {
+    <table>
+        <thead>
+            <tr>
+                <th>주문번호</th>
+                <th>송장번호</th>
+                <th>상태</th>
+                <th>주문자이름</th>
+                <th>수취인이름</th>
+                <th></th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var item in Items)
+            {
+            <tr>
+                <td>@item.OrderId</td>
+                <td>@item.InvoiceNumber</td>
+                <td>@(Helper.ToString(Helper.ToOrderSheetStatus(item.Status)))</td>
+                <td>@(item.Orderer == default ? "없음" : item.Orderer.Name)</td>
+                <td>@(item.Receiver == default ? "없음" : item.Receiver.Name)</td>
+                <td> <button @onclick="() => Upload(item)">송장업로드</button> </td>
+            </tr>
+            }
+        </tbody>
+
+        </table>
+        }
+
+        </div>
+@code {
+
+    public string AccessKey { get; set; }
+    public string SecretKey { get; set; }
+    public string VendorId { get; set; }
+    public DateTime CreatedAtFrom { get; set; } = DateTime.Now;
+    public DateTime CreatedAtTo { get; set; } = DateTime.Now;
+    public int Status { get; set; } = (int)OrderSheetStatus.Accept;
+    public string Message { get; set; }
+
+    public List<Ordersheet> Items { get; set; }
+
+
+    public void Search()
+    {
+        if (string.IsNullOrEmpty(AccessKey))
+        {
+            //Error
+            Message = "AccessKey 입력해주세요";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(SecretKey))
+        {
+            //Error
+            Message = "SecretKey 입력해주세요";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(VendorId))
+        {
+            //Error
+            Message = "VendorId 입력해주세요";
+            return;
+        }
+
+        if (CreatedAtFrom == default)
+        {
+            //Error
+            Message = "검색시작일시 입력해주세요";
+            return;
+        }
+
+        if (CreatedAtTo == default)
+        {
+            //Error
+            Message = "검색종료일시 입력해주세요";
+            return;
+        }
+
+        string statusParameterName = Helper.ToParameterName((OrderSheetStatus)Status);
+        if (string.IsNullOrEmpty(statusParameterName))
+        {
+            //Error
+            Message = "발주서상태 입력해주세요";
+            return;
+        }
+
+
+        if ((CreatedAtTo - CreatedAtFrom) > TimeSpan.FromDays(31))
+        {
+            //Error
+            Message = "검색은 최대 31일까지 가능";
+            return;
+        }
+
+
+        var response = restAPI.GetOrderSheets(AccessKey, SecretKey, VendorId, CreatedAtFrom, CreatedAtTo, statusParameterName);
+        if (response == default)
+        {
+            Message = "검색 실패";
+        }
+        else
+        {
+            if (response.Code == ResponseStatus.OK)
+            {
+                Message = string.Empty;
+            }
+            else
+            {
+                Message = $"{response.Code}\n{response.Messasge}";
+            }
+        }
+    }
+
+
+    public void Upload(Ordersheet sheet)
+    {
+        navManager.NavigateTo($"/invoices/{sheet.OrderId}?akey={AccessKey}&skey={SecretKey}&vid={VendorId}&sbid={sheet.ShipmentBoxId}");
+    }
+
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        AccessKey = "AccessKey";
+        SecretKey = "SecretKey";
+        VendorId = "ASDSA1000000";
+
+        Items = new List<Ordersheet>();
+        for (int i=0; i<10; i++)
+        {
+            Items.Add(Helper.GetDumpOrdersheet());
+        }
+    }
+}

@@ -1,0 +1,196 @@
+﻿@page "/invoices/{OrderId}"
+
+@using Microsoft.AspNetCore.WebUtilities
+
+@inject RestAPI restAPI
+@inject NavigationManager navManager
+
+
+<h1>
+    송장업로드 처리
+</h1>
+<div>
+    <h3>
+        Access Key
+    </h3>
+    <input type="text" @bind="AccessKey" placeholder="Enter the..." />
+    <h3>
+        Secret Key
+    </h3>
+    <input type="text" @bind="SecretKey" placeholder="Enter the..." />
+    <div>
+        <h3>
+            판매자 ID
+        </h3>
+        쿠팡에서 업체에게 발급한 고유 코드
+        예) A00012345
+    </div>
+    <input type="text" @bind="VendorId" placeholder="Enter the..." />
+    <h3>
+        배송번호(=묶음배송번호)
+    </h3>
+    <input type="text" @bind="ShipmentBoxId" placeholder="Enter the..." />
+
+    <h3>
+        주문번호
+    </h3>
+    <input type="text" @bind="OrderId" placeholder="Enter the..." />
+    <h3>
+        택배사 코드
+    </h3>
+    <input type="text" @bind="DeliveryCompanyCode" placeholder="Enter the..." />
+    <div>
+        <h3>
+            송장번호
+        </h3>
+        <div>
+            분리배송 시 선택. 입력 하지 않는 경우 "" 공백으로 입력한다.
+            분리배송 시에는 송장번호 또는 출고예정일 둘중에 한가지만 입력한다.
+            업체직송(DIRECT)일 경우 임의의 숫자만 입력가능하며 배송트래킹은 지원하지 않습니다.
+        </div>
+    </div>
+    <input type="text" @bind="InvoiceNumer" placeholder="Enter the..." />
+    <div>
+        <h3>옵션</h3>
+        <br />송장을 업로드 할 상품의 옵션 ID를 입력.
+    </div>
+    <input type="text" @bind="VendorItemId" placeholder="Enter the..." />
+    <h3>
+        분리배송 여부
+    </h3>
+    <select @bind="SplitShipping">
+        <option value="false">전체배송</option>
+        <option value="true">분리배송</option>
+    </select>
+
+    <h3>
+        분리 배송중인지 여부
+    </h3>
+    <select @bind="PreSplitShipped">
+        <option value="false">분리배송을 하지 않는 경우<br />해당 주문번호에 대해 처음으로 분리배송처리 할 경우 </option>
+        <option value="true">해당 주문번호에 이미 분리배송을 진행한 상품이 있을 경우</option>
+    </select>
+
+    <div>
+        분리배송 출고예정일<br />분리배송이 아닐 경우 선택하지 마세요
+    </div>
+    <input type="date" @bind="EstimatedShippingDate" />
+
+    <button @onclick="()=>Invoice()">송장 업로드</button>
+    <div>@Message</div>
+</div>
+
+@code {
+    [Parameter]
+    public string OrderId { get; set; }
+
+    public string AccessKey { get; set; }
+    public string SecretKey { get; set; }
+    public string VendorId { get; set; }
+    public string ShipmentBoxId { get; set; }
+
+    public string DeliveryCompanyCode { get; set; }
+    public string InvoiceNumer { get; set; }
+    public string VendorItemId { get; set; }
+    public string SplitShipping { get; set; } = "false";
+    public string PreSplitShipped { get; set; } = "false";
+    public DateTime EstimatedShippingDate { get; set; }
+
+    public string Message { get; set; }
+
+
+    public void Invoice()
+    {
+        long orderIdLong;
+        long shipmentBoxIdLong;
+        long vendorItemIdLong;
+        string estimatedShippingDateStr = Helper.DateToString(EstimatedShippingDate);
+
+        try
+        {
+            orderIdLong = long.Parse(OrderId);
+            shipmentBoxIdLong = long.Parse(ShipmentBoxId);
+            vendorItemIdLong = long.Parse(VendorItemId);
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+            return;
+        }
+
+
+        var responseData = restAPI.UploadOrderInvoices(AccessKey, SecretKey, VendorId, new API.Request.OrderInvoicesRequest()
+        {
+            VendorId = VendorId,
+            OrderSheetInvoiceApplyDto = new OrderSheetInvoiceApplyDto()
+            {
+                OrderId = orderIdLong,
+                DeliveryCompanyCode = DeliveryCompanyCode,
+                EstimatedShippingDate = estimatedShippingDateStr,
+                PreSplitShipped = PreSplitShipped,
+                ShipmentBoxId = shipmentBoxIdLong,
+                SplitShipping = SplitShipping,
+                VendorItemId = vendorItemIdLong,
+                InvoiceNumber = InvoiceNumer,
+            }
+        });
+
+
+        if (responseData == default)
+        {
+            Message = "송장 업로드 실패";
+        }
+        else
+        {
+            if (responseData.Code == ResponseStatus.OK)
+            {
+                Message = responseData.Data.ResponseMessage;
+            }
+            else
+            {
+                Message = responseData.Messasge;
+            }
+        }
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = navManager.ToAbsoluteUri(navManager.Uri);
+
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("akey", out var param))
+        {
+            try
+            {
+                AccessKey = param.First();
+            }
+            catch (Exception) { }
+        }
+
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("skey", out var param2))
+        {
+            try
+            {
+                SecretKey = param2.First();
+            }
+            catch (Exception) { }
+        }
+
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("vid", out var param3))
+        {
+            try
+            {
+                VendorId = param3.First();
+            }
+            catch (Exception) { }
+        }
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("sbid", out var param4))
+        {
+            try
+            {
+                ShipmentBoxId = param4.First();
+            }
+            catch (Exception) { }
+        }
+    }
+}
