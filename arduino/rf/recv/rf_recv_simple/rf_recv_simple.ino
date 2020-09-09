@@ -14,12 +14,13 @@ void setup(){
   Serial.println("init");
 }
 
-
+int count = 0;
 void loop(){
 
-  if (digitalRead(DATA) == 1){
-    Serial.println("SmartkeyOn");
-  }
-  delay(200);
-//  Serial.println(digitalRead(DATA));
+//  if (digitalRead(DATA) == 1){
+//    Serial.println("SmartkeyOn");
+//  }
+//  delay(200);
+  Serial.println(digitalRead(DATA));
+  count ++;
 }
