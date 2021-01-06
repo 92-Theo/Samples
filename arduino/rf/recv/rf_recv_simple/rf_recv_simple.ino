@@ -17,15 +17,15 @@ long rf_433_count = 0;
 
 void loop(){
 // Signal Test
-  Serial.println(digitalRead(RF_433_DATA));
-// if (digitalRead(RF_433_DATA) == 1){
-//    rf_433_count++;
-//  }else{
-//    if (rf_433_count != 0){
-//        Serial.println(rf_433_count);
-//        rf_433_count = 0;
-//      }
-//  }
+//  Serial.println(digitalRead(RF_433_DATA));
+ if (digitalRead(RF_433_DATA) == 1){
+    rf_433_count++;
+  }else{
+    if (rf_433_count != 0){
+        Serial.println(rf_433_count);
+        rf_433_count = 0;
+      }
+  }
 }
 
 
